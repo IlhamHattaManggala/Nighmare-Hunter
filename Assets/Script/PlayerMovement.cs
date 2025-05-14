@@ -1,0 +1,258 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class PlayerMovement : MonoBehaviour
+{
+    [Header("Player Movement")]
+    public float moveSpeed = 5f;
+    public float runSpeed = 8f;
+    public float jumpForce = 10f;
+
+    private Rigidbody2D rb;
+    private Animator anim;
+    private SpriteRenderer sprite;
+    private PlayerController playerController;
+
+    private Vector2 moveInputArrow = Vector2.zero;
+    private Vector2 moveInputASWD = Vector2.zero;
+    private Vector2 moveInput = Vector2.zero;
+
+    private bool isJumping = false;
+    private bool isCrouching = false;
+    private bool isShooting = false;
+    private bool isPaused = false;
+    private bool isStandingInput = false;
+    private bool wasRunningBeforeJump = false;
+
+    private enum MovementState { stand, idle, run, jump, fall, hurt, crouch, shoot, crouchShoot }
+
+    [Header("Jump Settings")]
+    [SerializeField] private LayerMask jumpableGround;
+    private BoxCollider2D coll;
+
+    [Header("Shooting Settings")]
+    public GameObject bulletPrefab;
+    public Transform bulletSpawn;
+    public Transform bulletSpawnShoot;
+    public float bulletSpeed = 10f;
+    private float shootCooldown = 0.4f;
+    private float shootTimer = 0f;
+    private int currentBulletLevel = 1;
+
+    private bool isAutoMoving = false;
+    private float autoMoveDistance = 2f;
+    private Vector3 autoMoveStartPos;
+    private float autoMoveSpeed = 2f;
+
+    [Header("Sound Settings")]
+    public AudioClip shootClip;
+    private AudioSource audioSource;
+
+    public GameObject backgroundMenu;
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        anim = GetComponent<Animator>();
+        sprite = GetComponent<SpriteRenderer>();
+        coll = GetComponent<BoxCollider2D>();
+        audioSource = GetComponent<AudioSource>();
+
+        playerController = new PlayerController();
+    }
+
+    private void OnEnable()
+    {
+        playerController.Enable();
+
+        playerController.Movement.MoveArrow.performed += ctx => moveInputArrow = ctx.ReadValue<Vector2>();
+        // HAPUS RESET di canceled agar input tidak ter-reset
+        // playerController.Movement.MoveArrow.canceled += ctx => moveInputArrow = Vector2.zero;
+
+        playerController.Movement.MoveASWD.performed += ctx => moveInputASWD = ctx.ReadValue<Vector2>();
+        // playerController.Movement.MoveASWD.canceled += ctx => moveInputASWD = Vector2.zero;
+
+        playerController.Movement.Jump.performed += ctx => Jump();
+
+        playerController.Movement.Crouch.performed += ctx => isCrouching = true;
+        playerController.Movement.Crouch.canceled += ctx => isCrouching = false;
+
+        playerController.Movement.Stand.performed += ctx => isStandingInput = true;
+        playerController.Movement.Stand.canceled += ctx => isStandingInput = false;
+
+        playerController.Movement.Shoot.performed += ctx => isShooting = true;
+        playerController.Movement.Shoot.canceled += ctx => isShooting = false;
+
+        playerController.Movement.CrouchShoot.performed += ctx => { isCrouching = true; isShooting = true; };
+        playerController.Movement.CrouchShoot.canceled += ctx => { isCrouching = false; isShooting = false; };
+
+        playerController.Movement.Pause.performed += ctx => TogglePause();
+    }
+
+    private void OnDisable()
+    {
+        playerController.Disable();
+    }
+
+    private void FixedUpdate()
+    {
+        if (isPaused) return;
+
+        if (isAutoMoving)
+        {
+            rb.velocity = new Vector2(autoMoveSpeed, rb.velocity.y);
+            if (Vector3.Distance(transform.position, autoMoveStartPos) >= autoMoveDistance)
+            {
+                rb.velocity = Vector2.zero;
+                isAutoMoving = false;
+                GoToNextScene();
+            }
+            return;
+        }
+
+        moveInput = moveInputArrow + moveInputASWD;
+
+        Vector2 targetVelocity = new Vector2(moveInput.x * moveSpeed, rb.velocity.y);
+        rb.velocity = targetVelocity;
+
+        UpdateAnimation();
+    }
+
+    private void UpdateAnimation()
+    {
+        MovementState state;
+
+        if (isPaused)
+        {
+            anim.speed = 0;
+            return;
+        }
+        else
+        {
+            anim.speed = 1;
+        }
+
+        if (moveInput.x != 0)
+        {
+            sprite.flipX = moveInput.x < 0;
+            state = MovementState.run;  // Pastikan run diperiksa dulu
+        }
+        else if (!isGrounded())  // Prioritaskan kondisi jump/fall
+        {
+            if (rb.velocity.y > 0.1f)
+                state = MovementState.jump;
+            else
+                state = MovementState.fall;
+        }
+        else if (isCrouching && isShooting)
+        {
+            state = MovementState.crouchShoot;
+        }
+        else if (isCrouching)
+        {
+            state = MovementState.crouch;
+        }
+        else if (isShooting)
+        {
+            state = MovementState.shoot;
+        }
+        else if (isStandingInput)  // Pastikan stand hanya diperiksa setelah semua kondisi lainnya
+        {
+            state = MovementState.stand;
+        }
+        else
+        {
+            state = MovementState.idle;
+        }
+
+        anim.SetInteger("state", (int)state);
+    }
+
+
+    private void Jump()
+    {
+        if (isGrounded() && !isCrouching)
+        {
+            wasRunningBeforeJump = moveInput.x != 0;
+            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+        }
+    }
+
+    private bool isGrounded()
+    {
+        return Physics2D.BoxCast(coll.bounds.center, coll.bounds.size, 0f, Vector2.down, .1f, jumpableGround);
+    }
+
+    private void TogglePause()
+    {
+        isPaused = !isPaused;
+        Time.timeScale = isPaused ? 0 : 1;
+
+        if (backgroundMenu != null)
+        {
+            backgroundMenu.SetActive(isPaused);
+        }
+    }
+
+
+    private void ShootBullet()
+    {
+        if (bulletPrefab == null) return;
+
+        // Pilih spawn point berdasarkan apakah player sedang crouch
+        Transform spawnPoint = isCrouching ? bulletSpawn : bulletSpawnShoot;
+        if (spawnPoint == null) return;
+
+        GameObject bullet = Instantiate(bulletPrefab, spawnPoint.position, Quaternion.identity);
+
+        float direction = sprite.flipX ? -1f : 1f;
+
+        BulletController bulletCtrl = bullet.GetComponent<BulletController>();
+        if (bulletCtrl != null)
+        {
+            bulletCtrl.SetLevel(currentBulletLevel);
+            bulletCtrl.SetDirection(new Vector2(direction, 0f));
+            bulletCtrl.speed = bulletSpeed;
+        }
+
+        if (shootClip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(shootClip);
+        }
+
+    }
+
+    public void UpgradeBullet()
+    {
+        currentBulletLevel++;
+    }
+
+    private void Update()
+    {
+        if (isPaused) return;
+
+        shootTimer -= Time.deltaTime;
+
+        // Cek apakah sedang menembak (termasuk crouch shoot)
+        if ((isShooting || (isCrouching && isShooting)) && shootTimer <= 0f)
+        {
+            ShootBullet();
+            shootTimer = shootCooldown;
+        }
+    }
+
+    public void StartAutoMoveToNextLevel()
+    {
+        isAutoMoving = true;
+        autoMoveStartPos = transform.position;
+    }
+
+    private void GoToNextScene()
+    {
+        int currentIndex = SceneManager.GetActiveScene().buildIndex;
+        SceneManager.LoadScene(currentIndex + 1);
+    }
+
+}

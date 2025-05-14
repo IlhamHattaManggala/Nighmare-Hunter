@@ -1,0 +1,11 @@
+Indexing Animations
+
+stand = 0
+idle = 1
+run = 2
+jump = 3
+fall = 4
+hurt = 5
+crouch = 6
+shoot = 7
+crouch-shoot = 8
