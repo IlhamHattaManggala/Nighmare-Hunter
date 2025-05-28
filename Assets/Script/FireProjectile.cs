@@ -8,7 +8,7 @@ public class FireProjectile : MonoBehaviour
 {
     // Start is called before the first frame update
     public float speed = 5f;
-    public float damage = 1f;
+    public int damage = 1;
     private Vector2 direction;
 
 
@@ -23,7 +23,7 @@ public class FireProjectile : MonoBehaviour
         GameObject menu = GameObject.Find("MenuCanvas"); // atau objek yang menyimpan MainMenuButtons
         menu.GetComponent<MainMenuButtons>().RegisterDynamicAudio(audio);
         int sceneIndex = SceneManager.GetActiveScene().buildIndex;
-        damage = sceneIndex * 5f;
+        damage = sceneIndex * 5;
     }
 
     public void SetDirection(Vector2 dir)

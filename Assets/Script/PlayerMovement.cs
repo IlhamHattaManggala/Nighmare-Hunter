@@ -2,13 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Player Movement")]
     public float moveSpeed = 5f;
     public float runSpeed = 8f;
-    public float jumpForce = 10f;
+    public float jumpForce = 15f;
 
     private Rigidbody2D rb;
     private Animator anim;
@@ -45,6 +46,8 @@ public class PlayerMovement : MonoBehaviour
     private float autoMoveDistance = 2f;
     private Vector3 autoMoveStartPos;
     private float autoMoveSpeed = 2f;
+    // Untuk input dari button UI
+    private float mobileInputX = 0f;
 
     [Header("Sound Settings")]
     public AudioClip shootClip;
@@ -68,11 +71,7 @@ public class PlayerMovement : MonoBehaviour
         playerController.Enable();
 
         playerController.Movement.MoveArrow.performed += ctx => moveInputArrow = ctx.ReadValue<Vector2>();
-        // HAPUS RESET di canceled agar input tidak ter-reset
-        // playerController.Movement.MoveArrow.canceled += ctx => moveInputArrow = Vector2.zero;
-
         playerController.Movement.MoveASWD.performed += ctx => moveInputASWD = ctx.ReadValue<Vector2>();
-        // playerController.Movement.MoveASWD.canceled += ctx => moveInputASWD = Vector2.zero;
 
         playerController.Movement.Jump.performed += ctx => Jump();
 
@@ -111,10 +110,8 @@ public class PlayerMovement : MonoBehaviour
             }
             return;
         }
-
         moveInput = moveInputArrow + moveInputASWD;
-
-        Vector2 targetVelocity = new Vector2(moveInput.x * moveSpeed, rb.velocity.y);
+        Vector2 targetVelocity = new Vector2((moveInput.x + mobileInputX) * moveSpeed, rb.velocity.y);
         rb.velocity = targetVelocity;
 
         UpdateAnimation();
@@ -123,6 +120,8 @@ public class PlayerMovement : MonoBehaviour
     private void UpdateAnimation()
     {
         MovementState state;
+
+        float horizontal = moveInput.x != 0 ? moveInput.x : mobileInputX;
 
         if (isPaused)
         {
@@ -134,18 +133,23 @@ public class PlayerMovement : MonoBehaviour
             anim.speed = 1;
         }
 
-        if (moveInput.x != 0)
-        {
-            sprite.flipX = moveInput.x < 0;
-            state = MovementState.run;  // Pastikan run diperiksa dulu
-        }
-        else if (!isGrounded())  // Prioritaskan kondisi jump/fall
+        // Paling penting: periksa status udara dulu
+        if (!isGrounded())
         {
             if (rb.velocity.y > 0.1f)
+            {
                 state = MovementState.jump;
-            else
+            }
+            else if (rb.velocity.y < -0.1f)
+            {
                 state = MovementState.fall;
+            }
+            else
+            {
+                state = MovementState.idle; // fallback kalau tidak bergerak vertikal
+            }
         }
+        // Cek kombinasi crouch dan shoot
         else if (isCrouching && isShooting)
         {
             state = MovementState.crouchShoot;
@@ -158,7 +162,12 @@ public class PlayerMovement : MonoBehaviour
         {
             state = MovementState.shoot;
         }
-        else if (isStandingInput)  // Pastikan stand hanya diperiksa setelah semua kondisi lainnya
+        else if (Mathf.Abs(horizontal) > 0.1f)
+        {
+            state = MovementState.run;
+            sprite.flipX = horizontal < 0;
+        }
+        else if (isStandingInput)
         {
             state = MovementState.stand;
         }
@@ -197,7 +206,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
 
-    private void ShootBullet()
+    public void ShootBullet()
     {
         if (bulletPrefab == null) return;
 
@@ -234,6 +243,16 @@ public class PlayerMovement : MonoBehaviour
         if (isPaused) return;
 
         shootTimer -= Time.deltaTime;
+        // Jika menggunakan mobile input, pakai itu
+        if (Application.isMobilePlatform)
+        {
+            moveInput = new Vector2(mobileInputX, 0f);
+        }
+        else
+        {
+            // Kalau bukan mobile, pakai Input System
+            moveInput = playerController.Movement.MoveArrow.ReadValue<Vector2>();
+        }
 
         // Cek apakah sedang menembak (termasuk crouch shoot)
         if ((isShooting || (isCrouching && isShooting)) && shootTimer <= 0f)
@@ -255,4 +274,29 @@ public class PlayerMovement : MonoBehaviour
         SceneManager.LoadScene(currentIndex + 1);
     }
 
+    // Fungsi ini dipanggil saat tombol kanan ditekan
+    public void MoveRight(bool isPressed)
+    {
+        if (isPressed)
+            mobileInputX = 1f;
+        else if (mobileInputX == 1f)
+            mobileInputX = 0f;
+    }
+
+    public void MoveLeft(bool isPressed)
+    {
+        if (isPressed)
+            mobileInputX = -1f;
+        else if (mobileInputX == -1f)
+            mobileInputX = 0f;
+    }
+
+    // Fungsi ini dipanggil saat tombol lompat ditekan
+    public void MobileJump()
+    {
+        if (isGrounded())
+        {
+            Jump();
+        }
+    }
 }

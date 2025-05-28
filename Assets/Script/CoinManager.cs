@@ -37,28 +37,40 @@ public class CoinManager : MonoBehaviour
                 coinText.gameObject.SetActive(false); // Sembunyikan teks coin
             }
 
-            // Jika ingin CoinManager juga nonaktif total:
             this.gameObject.SetActive(false);
             return;
         }
         else
         {
-            this.gameObject.SetActive(true); // Aktifkan kembali kalau scene bukan MainMenu
-            coinText.gameObject.SetActive(true);
+            this.gameObject.SetActive(true);
 
-            GameObject coinObj = GameObject.FindWithTag("CoinText");
+            GameObject coinObj = FindInactiveObjectByTag("CoinText");
             if (coinObj != null)
             {
+                coinObj.SetActive(true); // Aktifkan jika belum aktif
                 coinText = coinObj.GetComponent<TextMeshProUGUI>();
-                coinText.gameObject.SetActive(true);
                 UpdateCoinUI();
             }
             else
             {
-                Debug.LogWarning("CoinText tidak ditemukan di scene: " + scene.name);
+                Debug.LogWarning("CoinText tidak ditemukan bahkan dalam objek yang nonaktif.");
             }
         }
     }
+
+    private GameObject FindInactiveObjectByTag(string tag)
+    {
+        GameObject[] objs = Resources.FindObjectsOfTypeAll<GameObject>();
+        foreach (GameObject obj in objs)
+        {
+            if (obj.CompareTag(tag))
+            {
+                return obj;
+            }
+        }
+        return null;
+    }
+
 
     public void ResetCoins()
     {

@@ -22,6 +22,13 @@ public class MainMenuButtons : MonoBehaviour
     public void ChangeScene(string name)
     {
         Time.timeScale = 1f;
+
+        if (name == "Market")
+        {
+            // Simpan nama scene saat ini sebelum berpindah
+            PlayerPrefs.SetString("LastScene", SceneManager.GetActiveScene().name);
+        }
+
         SceneManager.LoadScene(name);
     }
 
