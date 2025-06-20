@@ -84,6 +84,10 @@ public class CoinManager : MonoBehaviour
         UpdateCoinUI();
     }
 
+    private void Update(){
+        UpdateCoinUI();
+    }
+
     public void AddCoin(int amount)
     {
         coins += amount;
@@ -128,4 +132,20 @@ public class CoinManager : MonoBehaviour
             Debug.LogWarning("Coin Text UI belum diassign di inspector!");
         }
     }
+
+    public bool SpendCoins(int amount)
+    {
+        if (coins >= amount)
+        {
+            coins -= amount;
+            UpdateCoinUI();
+            return true;
+        }
+        else
+        {
+            Debug.Log("Koin tidak cukup untuk pengurangan.");
+            return false;
+        }
+    }
+
 }

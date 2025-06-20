@@ -9,12 +9,24 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: d2cbd3039d2e5724e92e10501ba726cc
   - enabled: 1
-    path: Assets/Scenes/Market.unity
-    guid: f66d861d55ec0654ebf3fac536e7f0da
-  - enabled: 1
     path: Assets/Scenes/Level-1.unity
     guid: 4dc61dbb2839b21439267245744a9fe1
   - enabled: 1
     path: Assets/Scenes/Level-2.unity
     guid: 26f545e3dc1b6bf4285f396dd9f5a390
+  - enabled: 1
+    path: Assets/Scenes/Level-3.unity
+    guid: 0228fe2a7694ae94588c90b15cfe8647
+  - enabled: 1
+    path: Assets/Scenes/Level-4.unity
+    guid: 5159577e06ed8f54780da091e963f5a3
+  - enabled: 1
+    path: Assets/Scenes/Level-5.unity
+    guid: 7841c11623ab9604e9a5693776e7bc8d
+  - enabled: 1
+    path: Assets/Scenes/Level-6.unity
+    guid: 3745303f2f8fd364c8b1e4218fceb1bf
+  - enabled: 1
+    path: Assets/Scenes/Level-7.unity
+    guid: 63f4e8e8f29b857458fa7a4eb98678d5
   m_configObjects: {}

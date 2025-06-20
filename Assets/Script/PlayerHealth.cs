@@ -40,6 +40,17 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Water")) // pastikan AirTilemap kamu punya tag "Water"
+        {
+            Debug.Log("Player jatuh ke air!");
+            currentHealth = 0;
+            Die();
+        }
+    }
+
+
     private void Die()
     {
         Debug.Log("Player Dead");

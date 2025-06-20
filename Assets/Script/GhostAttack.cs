@@ -28,6 +28,9 @@ public class GhostAttack : MonoBehaviour
     public AudioClip fireEffect;
     private AudioSource audioSource;
 
+    [Header("TypeWritter Settings")]
+    private TypewriterLines typewriter;
+
     private void Start()
     {
         Debug.Log("Detection Range: " + detectionRange);  // Cek nilai saat Start
@@ -38,6 +41,7 @@ public class GhostAttack : MonoBehaviour
 
         startX = transform.position.x;  // Menyimpan posisi X awal Ghost
         Debug.Log("Posisi: " + startX);
+        typewriter = FindObjectOfType<TypewriterLines>();
         // audioSource.PlayOneShot(fireEffect);
     }
 
@@ -86,6 +90,13 @@ public class GhostAttack : MonoBehaviour
                 movingRight = true;
                 spriteRenderer.flipX = false;  // Mengubah arah sprite saat bergerak ke kanan
             }
+        }
+    }
+    void OnBecameVisible()
+    {
+        if (typewriter != null)
+        {
+            typewriter.TriggerGhostLines();
         }
     }
 

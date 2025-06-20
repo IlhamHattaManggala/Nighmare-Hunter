@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -54,6 +55,7 @@ public class PlayerMovement : MonoBehaviour
     private AudioSource audioSource;
 
     public GameObject backgroundMenu;
+
 
     private void Awake()
     {
@@ -176,7 +178,36 @@ public class PlayerMovement : MonoBehaviour
             state = MovementState.idle;
         }
 
-        anim.SetInteger("state", (int)state);
+        switch (state)
+        {
+            case MovementState.stand:
+                anim.SetInteger("state", 0);
+                break;
+            case MovementState.idle:
+                anim.SetInteger("state", 1);
+                break;
+            case MovementState.run:
+                anim.SetInteger("state", 2);
+                break;
+            case MovementState.jump:
+                anim.SetInteger("state", 3);
+                break;
+            case MovementState.fall:
+                anim.SetInteger("state", 4);
+                break;
+            case MovementState.hurt:
+                anim.SetInteger("state", 5);
+                break;
+            case MovementState.crouch:
+                anim.SetInteger("state", 6);
+                break;
+            case MovementState.shoot:
+                anim.SetInteger("state", 7);
+                break;
+            case MovementState.crouchShoot:
+                anim.SetInteger("state", 8);
+                break;
+        }
     }
 
 
@@ -206,16 +237,18 @@ public class PlayerMovement : MonoBehaviour
     }
 
 
+
     public void ShootBullet()
     {
         if (bulletPrefab == null) return;
+
+        isShooting = true; // tambahkan ini agar animasi trigger
 
         // Pilih spawn point berdasarkan apakah player sedang crouch
         Transform spawnPoint = isCrouching ? bulletSpawn : bulletSpawnShoot;
         if (spawnPoint == null) return;
 
         GameObject bullet = Instantiate(bulletPrefab, spawnPoint.position, Quaternion.identity);
-
         float direction = sprite.flipX ? -1f : 1f;
 
         BulletController bulletCtrl = bullet.GetComponent<BulletController>();
@@ -231,6 +264,14 @@ public class PlayerMovement : MonoBehaviour
             audioSource.PlayOneShot(shootClip);
         }
 
+        // Reset isShooting dalam waktu singkat supaya animasi bisa kembali ke idle
+        StartCoroutine(ResetShootingFlag());
+    }
+
+    private IEnumerator ResetShootingFlag()
+    {
+        yield return new WaitForSeconds(0.1f); // waktu cukup singkat
+        isShooting = false;
     }
 
     public void UpgradeBullet()
@@ -273,6 +314,31 @@ public class PlayerMovement : MonoBehaviour
         int currentIndex = SceneManager.GetActiveScene().buildIndex;
         SceneManager.LoadScene(currentIndex + 1);
     }
+    // Dipanggil ketika tombol crouch + shoot diklik (once)
+    public void CrouchShoot()
+    {
+        if (isGrounded())
+        {
+            isCrouching = true;
+            isShooting = true;
+
+            if (shootTimer <= 0f)
+            {
+                ShootBullet();
+                shootTimer = shootCooldown;
+            }
+
+            StartCoroutine(ResetCrouchShoot());
+        }
+    }
+
+    private IEnumerator ResetCrouchShoot()
+    {
+        yield return new WaitForSeconds(0.1f);
+        isCrouching = false;
+        isShooting = false;
+    }
+
 
     // Fungsi ini dipanggil saat tombol kanan ditekan
     public void MoveRight(bool isPressed)
@@ -299,4 +365,11 @@ public class PlayerMovement : MonoBehaviour
             Jump();
         }
     }
+    // Dipanggil saat tombol crouch+shoot ditekan (onPointerDown)
+    public void SetCrouchShoot(bool isPressed)
+    {
+        isCrouching = isPressed;
+        isShooting = isPressed;
+    }
+
 }

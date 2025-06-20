@@ -8,6 +8,8 @@ public class EnemyHealth : MonoBehaviour
     private float currentHealth;
     public HealthBar healthBar;
     private Animator anim;
+    public string enemyID;
+    public static List<string> deadEnemies = new List<string>();
     public bool isDead { get; private set; }
 
     private void Start()
@@ -47,17 +49,19 @@ public class EnemyHealth : MonoBehaviour
         Debug.Log("Ghost Dead");
 
         if (anim != null)
-        {
             anim.SetTrigger("Death");
-        }
 
         isDead = true;
 
+        if (!deadEnemies.Contains(enemyID))
+            deadEnemies.Add(enemyID);  // Tambahkan ke daftar musuh mati
+
         StartCoroutine(DestroyAfterDeath());
+
         CoinManager coinManager = FindObjectOfType<CoinManager>();
         if (coinManager != null)
         {
-            coinManager.AddCoin(1); // Setiap musuh mati, dapat 1 koin
+            coinManager.AddCoin(1);
         }
     }
 

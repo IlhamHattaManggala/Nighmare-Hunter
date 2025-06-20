@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ChestManager : MonoBehaviour
 {
     // Start is called before the first frame update
     private bool isOpened = false;
     private Animator animator;  // Tambahkan variabel untuk Animator
+    public GameObject bgSuccessful;
 
     private void Start()
     {
@@ -23,17 +25,20 @@ public class ChestManager : MonoBehaviour
             }
 
             isOpened = true;
-
-            // Trigger animasi untuk membuka peti
             animator.SetBool("isOpened", true);
-
-            // Mulai coroutine untuk menunggu animasi selesai sebelum menghapus peti
             StartCoroutine(WaitForAnimationToEnd());
 
             PlayerMovement player = collision.GetComponent<PlayerMovement>();
             if (player != null)
             {
                 player.StartAutoMoveToNextLevel();
+            }
+
+            // Cek nama scene aktif
+            string currentSceneName = SceneManager.GetActiveScene().name;
+            if (currentSceneName == "Level-7" && bgSuccessful != null)
+            {
+                bgSuccessful.SetActive(true);
             }
         }
     }
