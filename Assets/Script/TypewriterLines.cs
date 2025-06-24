@@ -43,6 +43,9 @@ public class TypewriterLines : MonoBehaviour
     private void Start()
     {
         StartCoroutine(PlayTypewriter());
+        Debug.Log("Font Size (after type): " + textUI.fontSize);
+        Debug.Log("Auto Size: " + textUI.enableAutoSizing);
+
     }
 
     IEnumerator PlayTypewriter()
@@ -79,6 +82,7 @@ public class TypewriterLines : MonoBehaviour
     IEnumerator TypeLine(string line)
     {
         textUI.text = "";
+        textUI.ForceMeshUpdate();
         skipRequested = false;
 
         foreach (char c in line)

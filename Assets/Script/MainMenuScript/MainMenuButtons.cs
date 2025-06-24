@@ -30,6 +30,12 @@ public class MainMenuButtons : MonoBehaviour
 
     public void ChangeScene(string name)
     {
+        if (name == "MainMenu")
+        {
+            PlayerPrefs.SetInt("PlayerCoins", 0);
+            PlayerPrefs.SetInt("IsNewGame", 0);
+            PlayerPrefs.Save(); // opsional, tapi bagus disimpan langsung
+        }
         Time.timeScale = 1f;
         SceneManager.LoadScene(name);
     }
@@ -101,18 +107,26 @@ public class MainMenuButtons : MonoBehaviour
 
     public void NewGame()
     {
-        if (CoinManager.Instance != null && CoinManager.Instance.gameObject.activeInHierarchy)
+        if (CoinManager.Instance != null)
         {
             CoinManager.Instance.ResetCoins();
         }
+
+        // Fallback jika CoinManager belum aktif
+        PlayerPrefs.SetInt("PlayerCoins", 0);
+        PlayerPrefs.Save();
         PlayerPrefs.SetInt("BulletLevel", 1);
 
         // Tandai sebagai permainan baru
-        PlayerPrefs.SetInt("IsNewGame", 1);
-        PlayerPrefs.SetInt("PlayerDefense", 0); // Reset defense saat masuk ke armor selector
-        PlayerPrefs.SetInt("BulletLevel", 1); // Reset defense saat masuk ke armor selector
-        PlayerPrefs.SetString("SelectedArmor", ""); // Reset selected armor saat masuk ke armor selector
-        PlayerPrefs.SetString("PurchasedArmors", "");
+        PlayerPrefs.SetInt("IsNewGame", 1); // Reset defense saat masuk ke armor selector
+        PlayerPrefs.SetInt("BulletLevel", 1);
+        PlayerPrefs.SetString("SelectedArmor", "Default Armor"); // Set default selected
+        PlayerPrefs.SetInt("PlayerDefense", 5); // Defense untuk Default Armor
+        PlayerPrefs.SetString("PurchasedArmors", JsonUtility.ToJson(new ArmorList
+        {
+            armors = new List<string> { "Default Armor" } // Tandai Default Armor sebagai sudah dibeli
+        }));
+        PlayerPrefs.SetString("DeadEnemies", "");
 
         // Simpan perubahan
         PlayerPrefs.Save();
@@ -142,6 +156,20 @@ public class MainMenuButtons : MonoBehaviour
         // Simpan bullet level
         int bulletLevel = PlayerPrefs.GetInt("BulletLevel", 1);
         PlayerPrefs.SetInt("BulletLevel", bulletLevel);
+        // Simpan koin
+        if (CoinManager.Instance != null)
+        {
+            PlayerPrefs.SetInt("PlayerCoins", CoinManager.Instance.coins);
+        }
+        // Simpan posisi pemain
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            Vector3 pos = player.transform.position;
+            PlayerPrefs.SetFloat("PlayerPosX", pos.x);
+            PlayerPrefs.SetFloat("PlayerPosY", pos.y);
+            PlayerPrefs.SetFloat("PlayerPosZ", pos.z);
+        }
 
         // Simpan armor dan defense
         string selectedArmor = PlayerPrefs.GetString("SelectedArmor", "");
@@ -165,6 +193,7 @@ public class MainMenuButtons : MonoBehaviour
         if (currentLevel >= maxBulletLevel)
         {
             Debug.Log("Bullet sudah level maksimal.");
+            NotificationManager.Instance?.Show("Bullet is max level");
             return;
         }
 
@@ -175,13 +204,14 @@ public class MainMenuButtons : MonoBehaviour
             currentLevel++;
             PlayerPrefs.SetInt("BulletLevel", currentLevel);
             PlayerPrefs.Save();
+            NotificationManager.Instance?.Show($"Successfully upgraded the bullet to level {currentLevel}");
 
             Debug.Log($"Berhasil upgrade bullet ke level {currentLevel}. Biaya: {cost} koin");
             UpdateUI();
         }
         else
         {
-            Debug.Log("Koin tidak cukup untuk upgrade.");
+            NotificationManager.Instance?.Show("Not enough coins to upgrade bullets.");
         }
     }
 

@@ -75,22 +75,27 @@ public class CoinManager : MonoBehaviour
     public void ResetCoins()
     {
         coins = 0;
+        PlayerPrefs.SetInt("PlayerCoins", coins);
         UpdateCoinUI();
     }
 
     private void Start()
     {
         audioSource = GetComponent<AudioSource>();
+        coins = PlayerPrefs.GetInt("PlayerCoins", 0);
         UpdateCoinUI();
     }
 
-    private void Update(){
+    private void Update()
+    {
         UpdateCoinUI();
     }
 
     public void AddCoin(int amount)
     {
         coins += amount;
+        PlayerPrefs.SetInt("PlayerCoins", coins);
+        PlayerPrefs.Save();
         if (coinEffect != null && audioSource != null)
         {
             audioSource.PlayOneShot(coinEffect, 1f); // Bisa atur volume juga
@@ -138,6 +143,8 @@ public class CoinManager : MonoBehaviour
         if (coins >= amount)
         {
             coins -= amount;
+            PlayerPrefs.SetInt("PlayerCoins", coins);
+            PlayerPrefs.Save();
             UpdateCoinUI();
             return true;
         }

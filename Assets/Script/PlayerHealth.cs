@@ -24,8 +24,11 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
+        playerDefense = PlayerPrefs.GetInt("PlayerDefense", 5); // ambil ulang setiap kali kena damage
+
         int finalDamage = Mathf.Max(damage - playerDefense, 0);
-        Debug.Log($"Terima damage {damage}, setelah armor: {finalDamage}");
+        Debug.Log($"Terima damage {damage}, setelah armor (def {playerDefense}): {finalDamage}");
+
         currentHealth -= finalDamage;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
 

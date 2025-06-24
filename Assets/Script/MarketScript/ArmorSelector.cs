@@ -28,9 +28,19 @@ public class ArmorSelector : MonoBehaviour
 
     private void Start()
     {
-        PlayerPrefs.SetInt("PlayerDefense", 0); // Reset defense saat masuk ke armor selector
-        PlayerPrefs.SetString("SelectedArmor", ""); // Reset selected armor saat masuk ke armor selector
-        PlayerPrefs.SetString("PurchasedArmors", ""); // Reset purchased armors saat masuk ke armor selector
+        bool isNewGame = PlayerPrefs.GetInt("IsNewGame", 0) == 1;
+
+        if (isNewGame)
+        {
+            PlayerPrefs.SetString("SelectedArmor", "Default Armor"); // Set default selected
+            PlayerPrefs.SetInt("PlayerDefense", 5); // Defense untuk Default Armor
+            PlayerPrefs.SetString("PurchasedArmors", JsonUtility.ToJson(new ArmorList
+            {
+                armors = new List<string> { "Default Armor" } // Tandai Default Armor sebagai sudah dibeli
+            }));
+            PlayerPrefs.Save();
+        }
+
         LoadPurchasedArmors();
         UpdateArmorButtonsUI();
     }
@@ -38,6 +48,7 @@ public class ArmorSelector : MonoBehaviour
     public void SelectArmor(string armorName)
     {
         ArmorData selectedArmor = null;
+        Debug.Log($"[DEBUG] Current Coins: {(CoinManager.Instance != null ? CoinManager.Instance.coins.ToString() : "NULL")}");
 
         foreach (var armor in armors)
         {
@@ -53,23 +64,24 @@ public class ArmorSelector : MonoBehaviour
             Debug.LogWarning("Armor tidak ditemukan!");
             return;
         }
+        Debug.Log($"[DEBUG] Trying to buy {selectedArmor.name}, Price: {selectedArmor.price}, Coins: {CoinManager.Instance.coins}");
 
         // Jika belum dibeli, beli dulu
         if (!purchasedArmors.Contains(selectedArmor.name))
         {
             if (!CoinManager.Instance.SpendCoins(selectedArmor.price))
             {
-                StartCoroutine(ShowNotification("Koin tidak cukup untuk membeli armor ini!"));
+                NotificationManager.Instance?.Show("Not enough coins to buy this armor!.");
                 return;
             }
 
             purchasedArmors.Add(selectedArmor.name);
             SavePurchasedArmors();
-            StartCoroutine(ShowNotification($"Berhasil membeli armor: {selectedArmor.name}!"));
+            NotificationManager.Instance?.Show($"Successfully purchased {selectedArmor.name}!");
         }
         else
         {
-            StartCoroutine(ShowNotification($"Armor {selectedArmor.name} dipakai!"));
+            NotificationManager.Instance?.Show($"{selectedArmor.name} is used!");
         }
 
         PlayerPrefs.SetString("SelectedArmor", selectedArmor.name);
@@ -78,18 +90,10 @@ public class ArmorSelector : MonoBehaviour
 
         UpdateArmorButtonsUI();
     }
-    IEnumerator ShowNotification(string message)
-    {
-        bgNotifikasi.SetActive(true);
-        textUI.text = message;
-        Debug.Log("Notifikasi Muncul...");
-        yield return new WaitForSecondsRealtime(notifikasiDurasi);
-        bgNotifikasi.SetActive(false);
-        Debug.Log("Notifikasi Hilang...");
-    }
     private void UpdateArmorButtonsUI()
     {
         string selected = PlayerPrefs.GetString("SelectedArmor", "");
+        Debug.Log($"[DEBUG] Selected Armor: {selected}");
 
         foreach (var button in armorButtons)
         {
@@ -137,12 +141,6 @@ public class ArmorSelector : MonoBehaviour
         Debug.Log("Saving Purchased Armors: " + json);
         PlayerPrefs.SetString("PurchasedArmors", json);
         PlayerPrefs.Save();
-    }
-    [System.Serializable]
-    private class ArmorList
-    {
-        public List<string> armors;
-        public HashSet<string> ToHashSet() => new HashSet<string>(armors ?? new List<string>());
     }
 }
 

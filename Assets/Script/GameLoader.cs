@@ -6,8 +6,16 @@ public class GameLoader : MonoBehaviour
 {
     void Start()
     {
-        LoadGame();
-        LoadDeadEnemies();
+        bool isNewGame = PlayerPrefs.GetInt("IsNewGame", 0) == 1;
+        if (!isNewGame)
+        {
+            LoadGame();
+            LoadDeadEnemies();
+        }
+        else
+        {
+            Debug.Log("[NEW GAME] Skipping LoadGame & LoadDeadEnemies");
+        }
     }
 
     private void LoadGame()
@@ -17,12 +25,18 @@ public class GameLoader : MonoBehaviour
         int playerDefense = PlayerPrefs.GetInt("PlayerDefense", 0);
         string purchasedArmors = PlayerPrefs.GetString("PurchasedArmors", "");
 
-        Debug.Log($"[LOAD GAME] BulletLevel: {bulletLevel}, Armor: {selectedArmor}, Defense: {playerDefense}");
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null && PlayerPrefs.HasKey("PlayerPosX"))
+        {
+            float x = PlayerPrefs.GetFloat("PlayerPosX");
+            float y = PlayerPrefs.GetFloat("PlayerPosY");
+            float z = PlayerPrefs.GetFloat("PlayerPosZ");
 
-        // Apply ke sistemmu (kalau kamu punya sistem pengatur armor/bullet stat)
-        // Misalnya:
-        // PlayerStats.Instance.SetBulletLevel(bulletLevel);
-        // PlayerStats.Instance.SetDefense(playerDefense);
+            player.transform.position = new Vector3(x, y, z);
+            Debug.Log($"[LOAD POS] Player position loaded to: ({x}, {y}, {z})");
+        }
+
+        Debug.Log($"[LOAD GAME] BulletLevel: {bulletLevel}, Armor: {selectedArmor}, Defense: {playerDefense}");
     }
 
     private void LoadDeadEnemies()
@@ -35,12 +49,21 @@ public class GameLoader : MonoBehaviour
         EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>();
         foreach (var enemy in enemies)
         {
-            if (deadEnemies.Contains(enemy.enemyID))
+            if (string.IsNullOrEmpty(enemy.enemyID)) continue;
+
+            // ✅ Hanya musuh bertag "Ghost" atau "Spider" yang boleh dihapus
+            if (deadEnemies.Contains(enemy.enemyID) &&
+                (enemy.CompareTag("Ghost") || enemy.CompareTag("Spider")))
             {
-                Destroy(enemy.gameObject);  // Hapus musuh yang sudah mati
+                Debug.Log($"[Destroy] Enemy ID: {enemy.enemyID}, Tag: {enemy.tag}, Name: {enemy.name}");
+                Destroy(enemy.gameObject);
+            }
+            else
+            {
+                Debug.Log($"[Ignore] {enemy.name} | Tag: {enemy.tag} | ID: {enemy.enemyID}");
             }
         }
 
-        EnemyHealth.deadEnemies = deadEnemies;  // Set ulang cache global
+        EnemyHealth.deadEnemies = deadEnemies; // Set ulang cache global
     }
 }
